@@ -1,0 +1,439 @@
+-----------------------------------------------------------------------------------Pod Definition -------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-demo
+  labels:
+    app: my-app
+    type: front-end
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+  nodeName: node01
+-----------------------------------------------  
+
+master $ cat pod2.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-sunil
+  labels:
+    app: my-app
+    type: front-end
+spec:
+  containers:
+  - name: nginx
+    image: sunilaws3380/centos
+# image: ramprakashupadhyay123/kubernetes
+# image: redis
+
+master $
+
+
+master $ cat nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  -  image: nginx
+     name: nginx
+master $
+
+-------------------------------------------------------------- Pod with Tolerations --------------
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bee
+  labels:
+    env: test
+spec:
+  containers:
+  - name: bee
+    image: nginx
+  tolerations:
+  - key: "spray"
+    value: "mortein"
+    operator: "Equal"
+    effect: "NoSchedule"
+
+--------------------------------------------------Node Affinity : place all pod on node01 --------------
+
+master $ cat blue-deployment.yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: blue
+spec:  
+  replicas: 6
+  selector:
+    matchLabels:
+      run: nginx
+  template:
+    metadata:
+      labels:
+        run: nginx
+    spec:
+      containers:
+      - image: nginx
+        imagePullPolicy: Always
+        name: nginx
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: color
+                operator: In
+                values:
+                - blue
+master $
+
+------------------------------------------------------------------Node Affinity: place all node on Master ----------------------------
+
+master $ cat red-deployment.yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: red
+spec:  
+  replicas: 3
+  selector:
+    matchLabels:
+      run: nginx
+  template:
+    metadata:
+      labels:
+        run: nginx
+    spec:
+      containers:
+      - image: nginx
+        imagePullPolicy: Always
+        name: nginx
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/master
+                operator: Exists
+master $
+
+
+------------------------------------------------------
+master $ kubectl run nginx --image=nginx --generator=run-pod/v1
+pod/nginx created
+
+running container/total container in pod == 1/2
+
+---------------------------------------------------------------------------------------------- ReplicaSet -------------------------
+master $ cat replicaset.yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: sunil  
+  labels:   
+    app: myapp
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:    
+      labels:       
+        tier: frontend
+    spec:
+      containers:
+      - name: centos-image
+        image: redis
+
+--------------------------------------------------------------------------------------
+master $ cat  replicaset-definition-1.yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: replicaset-1
+spec:  
+  replicas: 2
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+master $
+master $
+
+----------------------------------------------------------------------
+
+master $ cat replicaset-definition-2.yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: replicaset-2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+
+master $
+master $
+master $
+master $ kubectl scale rs new-replica-set --replicas=2
+replicaset.apps/new-replica-set scaled
+master $
+
+master $ cat replicaset-definition-1.yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: replicaset-1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+master $
+=================================================================================Deployment===============
+
+
+master $ cat deployment-definition-1.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: busybox-pod
+  template:
+    metadata:    
+     labels:
+        name: busybox-pod
+    spec: 
+     containers:
+      - name: busybox-container
+        image: busybox888
+        command:
+        - sh
+        - "-c"
+        - echo Hello Kubernetes! 
+master $
+master $
+
+------------------------------------------------------
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      name: busybox-pod
+  template:
+    metadata:    
+     labels:
+        name: busybox-pod
+    spec: 
+     containers:
+      - name: busybox-container
+        image: httpd:2.4-alpine
+       
+
+=========================================================================== ResourceQuota ==========================
+
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute-resources
+  namespace: dev
+spec:
+  hard:
+    pods: "10"
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+    limits.memory: 2Gi
+
+--------------------------------------------------------------------------- Service ---------
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: MyApp
+  ports:
+    - protocol: TCP
+      nodePort: 30008
+      port: 80
+      targetPort: 80
+  type: NodePort
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: back-end
+spec:
+  selector:
+    app: MyApp
+  ports:
+   - targetPort: 80
+     port: 80
+  type: ClusterIP
+
+
+
+====================================================================PersistentVolue Definition file =======================
+
+
+master $ cat pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-vol1
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  hostPath:
+     path: /tmp/data
+
+master $
+master $
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-log
+spec:
+  capacity:
+    storage: 100Mi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+     path: /pv/log
+
+
+-------------------------------------------------------------------PVC Definition file--------------------
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim
+spec:
+  accessModes:    
+     - ReadWriteOnce
+  resources:    
+    requests:
+      storage: 1Gi
+-------------------------------------------
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: claim-log-1
+spec:
+  accessModes:    
+     - ReadWriteOnce
+  resources:    
+    requests:
+      storage: 50Mi
+
+
+----------------------------------------PVC in POD-------------
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  containers:
+    - name: myfrontend
+      image: nginx
+      volumeMounts:
+      - mountPath: "/var/www/html"
+        name: mypd
+  volumes:
+    - name: mypd
+      persistentVolumeClaim:
+        claimName: myclaim
+
+
+
+master $ cat webapp-pod-pvc.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp
+spec:
+  containers:
+  - name: event-simulator
+    image: kodekloud/event-simulator
+    env:    
+    - name: LOG_HANDLERS
+      value: file
+    volumeMounts:
+    - mountPath: /log
+      name: log-volume
+
+  volumes:
+  - name: log-volume
+    persistentVolumeClaim:
+      claimName: claim-log-1
+
+master $
+master $
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

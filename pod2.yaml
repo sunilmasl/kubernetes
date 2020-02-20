@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-sunil
+  labels:
+    app: my-app
+    type: front-end
+spec:
+  containers:
+  - name: nginx
+    image: sunilaws3380/centos
+# image: ramprakashupadhyay123/kubernetes
+# image: redis
+
